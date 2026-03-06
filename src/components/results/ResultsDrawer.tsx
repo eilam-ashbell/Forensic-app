@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import {
+  ComposedChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 import { useStore } from '../../store'
 import { TOOL_REGISTRY } from '../../constants/tools'
 import { StatusBadge } from '../shared/StatusBadge'
@@ -22,18 +30,20 @@ export function ResultsDrawer() {
         open ? 'h-72' : 'h-8'
       }`}
     >
-      <div
-        className="flex items-center gap-2 px-3 h-8 border-b border-zinc-700 cursor-pointer select-none shrink-0"
+      <button
+        className="flex items-center gap-2 px-3 h-8 border-b border-zinc-700 cursor-pointer select-none shrink-0 w-full text-left"
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label={open ? 'Collapse results drawer' : 'Expand results drawer'}
       >
-        <span className="text-zinc-400 text-xs">{open ? '▼' : '▲'}</span>
+        <span className="text-zinc-400 text-xs" aria-hidden="true">{open ? '▼' : '▲'}</span>
         <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Results</span>
         {completedTools.length > 0 && (
-          <span className="ml-2 text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded">
+          <span className="ml-2 text-[10px] bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded" aria-label={`${completedTools.length} results`}>
             {completedTools.length}
           </span>
         )}
-      </div>
+      </button>
 
       {open && (
         <div className="flex flex-1 overflow-hidden">
@@ -45,6 +55,8 @@ export function ResultsDrawer() {
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
+                  aria-label={`View ${t.label} result`}
+                  aria-pressed={activeTab === t.id}
                   className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors ${
                     activeTab === t.id
                       ? 'bg-zinc-800 text-zinc-200'
@@ -233,19 +245,41 @@ function ToolResultView({ result }: { result: ToolResult }) {
       )
 
     case 'histogram-analyzer': {
-      const maxCount = Math.max(...result.data.bins.map((b) => Math.max(b.r, b.g, b.b)), 1)
+      const logScale = false // TODO: wire to params.logScale
+      const chartData = result.data.bins.map((b) => ({
+        value: b.value,
+        r: logScale && b.r > 0 ? Math.log10(b.r) : b.r,
+        g: logScale && b.g > 0 ? Math.log10(b.g) : b.g,
+        b: logScale && b.b > 0 ? Math.log10(b.b) : b.b,
+      }))
       return (
         <div>
-          <p className="text-[10px] text-zinc-500 mb-2">Histogram (256 bins)</p>
-          <div className="flex items-end gap-px h-20 w-full bg-zinc-950 rounded">
-            {result.data.bins.map((bin) => (
-              <div key={bin.value} className="flex-1 flex flex-col-reverse gap-px items-stretch">
-                <div style={{ height: `${(bin.r / maxCount) * 80}px` }} className="bg-red-500/70 min-h-px" />
-                <div style={{ height: `${(bin.g / maxCount) * 80}px` }} className="bg-green-500/70 min-h-px" />
-                <div style={{ height: `${(bin.b / maxCount) * 80}px` }} className="bg-blue-500/70 min-h-px" />
-              </div>
-            ))}
-          </div>
+          <p className="text-[10px] text-zinc-500 mb-2">Pixel value distribution (256 bins)</p>
+          <ResponsiveContainer width="100%" height={140}>
+            <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+              <XAxis
+                dataKey="value"
+                tick={{ fontSize: 9, fill: '#71717a' }}
+                tickLine={false}
+                axisLine={false}
+                interval={63}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: '#71717a' }}
+                tickLine={false}
+                axisLine={false}
+                width={32}
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', fontSize: 10 }}
+                labelFormatter={(v) => `Value: ${v}`}
+                formatter={(val, name) => [Math.round(Number(val ?? 0)), String(name).toUpperCase()]}
+              />
+              <Area type="monotone" dataKey="r" stroke="#f87171" fill="#f87171" fillOpacity={0.3} strokeWidth={1} dot={false} />
+              <Area type="monotone" dataKey="g" stroke="#4ade80" fill="#4ade80" fillOpacity={0.3} strokeWidth={1} dot={false} />
+              <Area type="monotone" dataKey="b" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} strokeWidth={1} dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
           <div className="flex gap-4 mt-1 text-[10px]">
             <span className="text-red-400">■ R</span>
             <span className="text-green-400">■ G</span>

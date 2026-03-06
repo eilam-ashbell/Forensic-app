@@ -20,7 +20,7 @@ export function TopBar() {
       <span className="text-blue-400 font-bold text-sm tracking-wider mr-2">IFW</span>
 
       {/* File open */}
-      <label className="cursor-pointer">
+      <label className="cursor-pointer" aria-label="Open image file">
         <span className="px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded transition-colors">
           Open
         </span>
@@ -32,7 +32,7 @@ export function TopBar() {
         value={sessionName}
         onChange={(e) => setSessionName(e.target.value)}
         className="flex-1 max-w-xs bg-transparent text-zinc-300 text-sm border-b border-transparent hover:border-zinc-600 focus:border-blue-500 focus:outline-none px-1 py-0.5"
-        placeholder="Session name"
+        aria-label="Session name" placeholder="Session name"
       />
 
       {/* Image info */}
@@ -55,7 +55,7 @@ export function TopBar() {
       )}
 
       {/* About */}
-      <button className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+      <button aria-label="About Image Forensics Workbench" className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
         About
       </button>
 

@@ -72,6 +72,15 @@ export function useToolRunner(toolId: ToolId) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       const executionMs = Math.round(performance.now() - start)
       store.setToolResult(toolId, result, executionMs)
+      // Dev-mode heap monitor — eliminated by Vite tree-shaking in production builds
+      if (import.meta.env.DEV) {
+        const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory
+        if (mem) {
+          console.debug(
+            `[IFW] ${toolId} done in ${executionMs}ms | heap: ${(mem.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB / ${(mem.totalJSHeapSize / 1024 / 1024).toFixed(1)} MB`,
+          )
+        }
+      }
     } catch (err) {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       const msg = err instanceof Error ? err.message : String(err)
