@@ -1,26 +1,22 @@
 import * as Comlink from 'comlink'
-import type { ToolResult } from '../../types/tools'
+import { wrapWorker } from '../../workers/bridge'
 import type { BinaryWorker } from '../../workers/binary.worker'
-import { createWorkerProxy } from '../../workers/bridge'
+import type { ToolResult } from '../../types/tools'
+import BinaryWorkerInit from '../../workers/binary.worker.ts?worker'
 
 let proxy: Comlink.Remote<BinaryWorker> | null = null
-
-function getProxy(): Comlink.Remote<BinaryWorker> {
-  if (!proxy) {
-    proxy = createWorkerProxy<BinaryWorker>(
-      new URL('../../workers/binary.worker.ts', import.meta.url),
-    )
-  }
+function getProxy() {
+  if (!proxy) proxy = wrapWorker<BinaryWorker>(new BinaryWorkerInit())
   return proxy
 }
 
 export async function runJpegQuantization(
-  image: { arrayBuffer: ArrayBuffer; file: { type: string } },
+  image: { arrayBuffer: ArrayBuffer },
   _params: Record<string, unknown>,
   onProgress: (pct: number) => void,
 ): Promise<ToolResult> {
   onProgress(10)
-  const tables = await getProxy().extractQuantizationTables(image.arrayBuffer.slice(0))
+  const tables = await getProxy().extractQuantizationTables(image.arrayBuffer)
   onProgress(100)
   return { toolId: 'jpeg-quantization', tables }
 }

@@ -1,17 +1,14 @@
 import * as Comlink from 'comlink'
 
 /**
- * Creates a typed Comlink proxy for a Web Worker.
- * The worker file must use `Comlink.expose(new WorkerClass())`.
+ * Wraps an already-constructed Worker with a typed Comlink proxy.
+ * Workers must be instantiated with the `?worker` suffix in Vite so they
+ * are compiled and bundled correctly as separate JS entry points.
  */
-export function createWorkerProxy<T extends object>(workerUrl: URL): Comlink.Remote<T> {
-  const worker = new Worker(workerUrl, { type: 'module' })
+export function wrapWorker<T extends object>(worker: Worker): Comlink.Remote<T> {
   return Comlink.wrap<T>(worker)
 }
 
-/**
- * Terminates a Comlink proxy's underlying worker.
- */
 export async function terminateProxy<T extends object>(proxy: Comlink.Remote<T>): Promise<void> {
   await proxy[Comlink.releaseProxy]()
 }

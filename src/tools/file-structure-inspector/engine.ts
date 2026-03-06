@@ -1,16 +1,12 @@
 import * as Comlink from 'comlink'
-import type { ToolResult } from '../../types/tools'
+import { wrapWorker } from '../../workers/bridge'
 import type { BinaryWorker } from '../../workers/binary.worker'
-import { createWorkerProxy } from '../../workers/bridge'
+import type { ToolResult } from '../../types/tools'
+import BinaryWorkerInit from '../../workers/binary.worker.ts?worker'
 
 let proxy: Comlink.Remote<BinaryWorker> | null = null
-
-function getProxy(): Comlink.Remote<BinaryWorker> {
-  if (!proxy) {
-    proxy = createWorkerProxy<BinaryWorker>(
-      new URL('../../workers/binary.worker.ts', import.meta.url),
-    )
-  }
+function getProxy() {
+  if (!proxy) proxy = wrapWorker<BinaryWorker>(new BinaryWorkerInit())
   return proxy
 }
 
@@ -20,7 +16,7 @@ export async function runFileStructureInspector(
   onProgress: (pct: number) => void,
 ): Promise<ToolResult> {
   onProgress(10)
-  const chunks = await getProxy().inspectFileStructure(Comlink.transfer(image.arrayBuffer.slice(0), [image.arrayBuffer.slice(0)]))
+  const chunks = await getProxy().inspectFileStructure(image.arrayBuffer)
   onProgress(100)
   return { toolId: 'file-structure-inspector', chunks }
 }

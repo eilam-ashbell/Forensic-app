@@ -36,8 +36,11 @@ export function useToolRunner(toolId: ToolId) {
 
     try {
       const params = store.toolStates[toolId].params
+      // Clone ImageData so engines can safely transfer the buffer to workers
+      const clonedPixels = new Uint8ClampedArray(image.imageData.data)
+      const clonedImageData = new ImageData(clonedPixels, image.imageData.width, image.imageData.height)
       const result = await engine(
-        { imageData: image.imageData, arrayBuffer: image.arrayBuffer, file: image.file },
+        { imageData: clonedImageData, arrayBuffer: image.arrayBuffer.slice(0), file: image.file },
         params,
         (pct) => store.setToolProgress(toolId, pct),
       )

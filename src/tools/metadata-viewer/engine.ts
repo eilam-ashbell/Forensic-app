@@ -1,16 +1,12 @@
 import * as Comlink from 'comlink'
-import type { ToolResult } from '../../types/tools'
+import { wrapWorker } from '../../workers/bridge'
 import type { MetadataWorker } from '../../workers/metadata.worker'
-import { createWorkerProxy } from '../../workers/bridge'
+import type { ToolResult } from '../../types/tools'
+import MetadataWorkerInit from '../../workers/metadata.worker.ts?worker'
 
 let proxy: Comlink.Remote<MetadataWorker> | null = null
-
-function getProxy(): Comlink.Remote<MetadataWorker> {
-  if (!proxy) {
-    proxy = createWorkerProxy<MetadataWorker>(
-      new URL('../../workers/metadata.worker.ts', import.meta.url),
-    )
-  }
+function getProxy() {
+  if (!proxy) proxy = wrapWorker<MetadataWorker>(new MetadataWorkerInit())
   return proxy
 }
 
