@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { useImageLoader } from '../../hooks/useImageLoader'
+import { ExportDialog } from '../export/ExportDialog'
 
 export function TopBar() {
+  const [showExport, setShowExport] = useState(false)
   const sessionName = useStore((s) => s.sessionName)
   const setSessionName = useStore((s) => s.setSessionName)
   const image = useStore((s) => s.image)
@@ -41,10 +44,22 @@ export function TopBar() {
         </span>
       )}
 
+      {/* Export */}
+      {image && (
+        <button
+          onClick={() => setShowExport(true)}
+          className="ml-2 px-3 py-1 text-xs bg-blue-700 hover:bg-blue-600 text-white rounded transition-colors"
+        >
+          Export
+        </button>
+      )}
+
       {/* About */}
-      <button className="ml-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+      <button className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
         About
       </button>
+
+      {showExport && <ExportDialog onClose={() => setShowExport(false)} />}
     </header>
   )
 }

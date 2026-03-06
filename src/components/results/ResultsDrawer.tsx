@@ -4,6 +4,7 @@ import { TOOL_REGISTRY } from '../../constants/tools'
 import { StatusBadge } from '../shared/StatusBadge'
 import { OverlayResult } from './renderers/OverlayResult'
 import { TableResult } from './renderers/TableResult'
+import { ErrorBoundary } from '../shared/ErrorBoundary'
 import type { ToolId, ToolResult } from '../../types/tools'
 
 export function ResultsDrawer() {
@@ -59,7 +60,9 @@ export function ResultsDrawer() {
 
           <div className="flex-1 overflow-auto p-3">
             {activeTab ? (
-              <ResultContent toolId={activeTab} />
+              <ErrorBoundary label={activeTab}>
+                <ResultContent toolId={activeTab} />
+              </ErrorBoundary>
             ) : (
               <p className="text-xs text-zinc-600">Select a result on the left</p>
             )}
