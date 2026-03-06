@@ -1,5 +1,6 @@
 import type { ImageRecord } from '../../types/image'
 import { sampleImageBitmap } from './sampler'
+import { md5Hex } from './md5'
 
 const SUPPORTED_MIME = new Set([
   'image/jpeg',
@@ -32,14 +33,6 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
     .join('')
 }
 
-/** Simple MD5 — not cryptographically secure, chain-of-custody only */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function md5Hex(_buf: ArrayBuffer): Promise<string> {
-  // Browsers don't support MD5 natively via SubtleCrypto.
-  // TODO: replace with md5 from 'hash-wasm' or similar when added.
-  return 'md5-not-implemented'
-}
-
 export class ImageLoadError extends Error {}
 
 export async function loadImageFile(file: File): Promise<ImageRecord> {
@@ -59,7 +52,10 @@ export async function loadImageFile(file: File): Promise<ImageRecord> {
   const imageData = await sampleImageBitmap(bitmap)
   bitmap.close()
 
-  const [sha256, md5] = await Promise.all([sha256Hex(arrayBuffer), md5Hex(arrayBuffer)])
+  const [sha256, md5] = await Promise.all([
+    sha256Hex(arrayBuffer),
+    Promise.resolve(md5Hex(arrayBuffer)),
+  ])
 
   return {
     file,
