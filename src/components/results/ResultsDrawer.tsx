@@ -299,6 +299,100 @@ function ToolResultView({ result }: { result: ToolResult }) {
         />
       )
 
+    // Phase 4 renderers
+    case 'keypoint-clone':
+    case 'block-matching-clone':
+      return (
+        <div className="space-y-2">
+          <OverlayResult
+            dataUrl={result.data.overlayDataUrl}
+            stats={[
+              { label: 'Matches found', value: result.data.matchCount },
+              { label: 'Shown (cyan=src, magenta=dst)', value: '' },
+            ]}
+          />
+          {result.data.matches.length > 0 && (
+            <TableResult
+              rows={result.data.matches.slice(0, 20).map((m) => ({
+                'Src X': m.srcX, 'Src Y': m.srcY,
+                'Dst X': m.dstX, 'Dst Y': m.dstY,
+                Conf: m.confidence.toFixed(3),
+              }))}
+              columns={['Src X', 'Src Y', 'Dst X', 'Dst Y', 'Conf']}
+              maxRows={20}
+            />
+          )}
+        </div>
+      )
+
+    case 'prnu':
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] text-zinc-500 mb-1">Noise Residual</p>
+            <img src={result.data.residualDataUrl} alt="PRNU residual" className="w-full max-w-xs rounded border border-zinc-700" />
+          </div>
+          <div>
+            <p className="text-[10px] text-zinc-500 mb-1">Autocorrelation Map</p>
+            <img src={result.data.correlationDataUrl} alt="Autocorrelation" className="w-32 h-auto rounded border border-zinc-700" />
+          </div>
+        </div>
+      )
+
+    case 'lighting-estimator':
+      return (
+        <OverlayResult
+          dataUrl={result.data.overlayDataUrl}
+          stats={[
+            { label: 'Estimated angle', value: `${result.data.estimatedAngleDegrees}°` },
+            { label: 'Confidence', value: `${(result.data.confidence * 100).toFixed(1)}%` },
+          ]}
+        />
+      )
+
+    case 'stego-stats':
+      return (
+        <div className="space-y-3">
+          {result.tests.map((t) => (
+            <div key={t.test} className="border border-zinc-800 rounded p-2">
+              <p className="text-xs font-medium text-zinc-300 mb-1 capitalize">{t.test.replace(/-/g, ' ')}</p>
+              <p className="text-[10px] font-mono text-zinc-400">
+                Statistic: <span className="text-zinc-200">{t.statistic.toFixed(4)}</span>
+                {t.pValue !== undefined && (
+                  <> · p={t.pValue.toFixed(4)}</>
+                )}
+              </p>
+              {t.estimatedPayloadFraction !== undefined && (
+                <p className="text-[10px] font-mono text-zinc-400">
+                  Payload: <span className={t.estimatedPayloadFraction > 0.05 ? 'text-amber-300' : 'text-emerald-400'}>
+                    {(t.estimatedPayloadFraction * 100).toFixed(1)}%
+                  </span>
+                </p>
+              )}
+              <p className={`text-[10px] mt-1 ${t.interpretation.includes('suspected') || t.interpretation.includes('present') ? 'text-amber-300' : 'text-zinc-500'}`}>
+                {t.interpretation}
+              </p>
+            </div>
+          ))}
+        </div>
+      )
+
+    case 'ai-forgery-detector':
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] bg-zinc-700 text-zinc-400 px-2 py-0.5 rounded">Heuristic mode — no ONNX model loaded</span>
+          </div>
+          <OverlayResult
+            dataUrl={result.data.overlayDataUrl}
+            stats={[
+              { label: 'Global score', value: `${(result.data.globalScore * 100).toFixed(1)}%` },
+              { label: 'Confidence', value: `${(result.data.confidence * 100).toFixed(0)}%` },
+            ]}
+          />
+        </div>
+      )
+
     default:
       return (
         <pre className="text-[10px] text-zinc-300 font-mono whitespace-pre-wrap break-all">
