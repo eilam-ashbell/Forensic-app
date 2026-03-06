@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import { useImageLoader } from '../../hooks/useImageLoader'
 import { ExportDialog } from '../export/ExportDialog'
+import { AboutDialog } from '../shared/AboutDialog'
 
 export function TopBar() {
   const [showExport, setShowExport] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const sessionName = useStore((s) => s.sessionName)
   const setSessionName = useStore((s) => s.setSessionName)
   const image = useStore((s) => s.image)
@@ -55,11 +57,16 @@ export function TopBar() {
       )}
 
       {/* About */}
-      <button aria-label="About Image Forensics Workbench" className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+      <button
+        onClick={() => setShowAbout(true)}
+        aria-label="About Image Forensics Workbench"
+        className="ml-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+      >
         About
       </button>
 
       {showExport && <ExportDialog onClose={() => setShowExport(false)} />}
+      {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
     </header>
   )
 }

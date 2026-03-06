@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../../store'
 import { buildZipBundle, downloadBlob } from '../../lib/export/zip'
 import { buildPdfReport } from '../../lib/export/pdf'
@@ -19,6 +19,12 @@ export function ExportDialog({ onClose }: Props) {
   const sessionName = useStore((s) => s.sessionName)
 
   const completedCount = Object.values(toolStates).filter((t) => t.status === 'done').length
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
 
   const handleZip = async () => {
     if (!image) return
@@ -60,7 +66,7 @@ export function ExportDialog({ onClose }: Props) {
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-zinc-200">Export</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-xs">✕</button>
+          <button onClick={onClose} autoFocus aria-label="Close export dialog" className="text-zinc-500 hover:text-zinc-300 text-xs">✕</button>
         </div>
 
         <p className="text-xs text-zinc-500 mb-4">

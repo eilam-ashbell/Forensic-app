@@ -1,16 +1,31 @@
 import { useCallback, useState } from 'react'
 import { useImageLoader } from '../../hooks/useImageLoader'
 
+const SUPPORTED_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/tiff',
+  'image/bmp', 'image/gif', 'image/heic', 'image/heif',
+]
+
+function validateAndLoad(file: File, loadFile: (f: File) => void, setFormatError: (msg: string | null) => void) {
+  if (file.type && !SUPPORTED_TYPES.includes(file.type)) {
+    setFormatError(`Unsupported format: ${file.type}. Use JPEG, PNG, WebP, TIFF, BMP, GIF, or HEIC.`)
+    return
+  }
+  setFormatError(null)
+  loadFile(file)
+}
+
 export function FileDropzone() {
   const { loadFile, loading, error } = useImageLoader()
   const [dragging, setDragging] = useState(false)
+  const [formatError, setFormatError] = useState<string | null>(null)
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragging(false)
       const file = e.dataTransfer.files[0]
-      if (file) loadFile(file)
+      if (file) validateAndLoad(file, loadFile, setFormatError)
     },
     [loadFile],
   )
@@ -18,7 +33,7 @@ export function FileDropzone() {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file) loadFile(file)
+      if (file) validateAndLoad(file, loadFile, setFormatError)
     },
     [loadFile],
   )
@@ -50,7 +65,9 @@ export function FileDropzone() {
             disabled={loading}
           />
         </label>
-        {error && <p className="mt-3 text-red-400 text-sm">{error}</p>}
+        {(error || formatError) && (
+          <p className="mt-3 text-red-400 text-sm">{formatError ?? error}</p>
+        )}
       </div>
     </div>
   )

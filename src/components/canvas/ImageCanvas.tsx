@@ -46,6 +46,8 @@ export function ImageCanvas() {
   const isDrawingRectRef = useRef(false)
   const rectOriginRef = useRef<{ x: number; y: number } | null>(null)
   const activeRectRef = useRef<Rect | null>(null)
+  const isPanningRef = useRef(false)
+  const panLastRef = useRef<{ x: number; y: number } | null>(null)
 
   const [undoStack, setUndoStack] = useState<string[]>([])
 
@@ -53,6 +55,7 @@ export function ImageCanvas() {
   const zoom = useStore((s) => s.zoom)
   const setZoom = useStore((s) => s.setZoom)
   const overlayOpacity = useStore((s) => s.overlayOpacity)
+  const setOverlayOpacity = useStore((s) => s.setOverlayOpacity)
   const showOverlay = useStore((s) => s.showOverlay)
   const toggleOverlay = useStore((s) => s.toggleOverlay)
   const annotationMode = useStore((s) => s.annotationMode)
@@ -269,6 +272,40 @@ export function ImageCanvas() {
     return () => { fabric.off('path:created', onPath) }
   }, [pushUndo])
 
+  // Pan (drag) — only when no annotation mode is active
+  useEffect(() => {
+    const fabric = fabricRef.current
+    if (!fabric || annotationMode !== null) return
+    const onDown = (opt: { e: Event }) => {
+      if (!image) return
+      isPanningRef.current = true
+      const e = opt.e as PointerEvent
+      panLastRef.current = { x: e.clientX, y: e.clientY }
+      fabric.setCursor('grab')
+    }
+    const onMove = (opt: { e: Event }) => {
+      if (!isPanningRef.current || !panLastRef.current) return
+      const e = opt.e as PointerEvent
+      const dx = e.clientX - panLastRef.current.x
+      const dy = e.clientY - panLastRef.current.y
+      fabric.relativePan(new Point(dx, dy))
+      panLastRef.current = { x: e.clientX, y: e.clientY }
+    }
+    const onUp = () => {
+      isPanningRef.current = false
+      panLastRef.current = null
+      fabric.setCursor('default')
+    }
+    fabric.on('mouse:down', onDown)
+    fabric.on('mouse:move', onMove)
+    fabric.on('mouse:up', onUp)
+    return () => {
+      fabric.off('mouse:down', onDown)
+      fabric.off('mouse:move', onMove)
+      fabric.off('mouse:up', onUp)
+    }
+  }, [annotationMode, image])
+
   // Zoom
   useEffect(() => {
     const fabric = fabricRef.current
@@ -313,16 +350,34 @@ export function ImageCanvas() {
         {!image && <div className="absolute inset-0 z-10"><FileDropzone /></div>}
         <canvas ref={canvasRef} className="absolute inset-0" aria-label="Image analysis canvas" role="img" />
         {image && activeOverlay && (
-          <button
-            onClick={toggleOverlay}
-            aria-label={showOverlay ? 'Hide tool overlay' : 'Show tool overlay'}
-            title="Toggle overlay (O)"
-            className={`absolute bottom-2 right-2 z-20 px-2 py-1 text-[10px] rounded transition-colors ${
-              showOverlay ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
-            }`}
-          >
-            {showOverlay ? 'Overlay ON' : 'Overlay OFF'}
-          </button>
+          <div className="absolute bottom-2 right-2 z-20 flex items-center gap-2">
+            {showOverlay && (
+              <label className="flex items-center gap-1.5 bg-zinc-900/80 px-2 py-1 rounded border border-zinc-700">
+                <span className="text-[9px] text-zinc-400">Opacity</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={overlayOpacity}
+                  onChange={(e) => setOverlayOpacity(Number(e.target.value))}
+                  className="w-16 h-1 accent-blue-500"
+                  aria-label="Overlay opacity"
+                />
+                <span className="text-[9px] text-zinc-500 w-6">{Math.round(overlayOpacity * 100)}%</span>
+              </label>
+            )}
+            <button
+              onClick={toggleOverlay}
+              aria-label={showOverlay ? 'Hide tool overlay' : 'Show tool overlay'}
+              title="Toggle overlay (O)"
+              className={`px-2 py-1 text-[10px] rounded transition-colors ${
+                showOverlay ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
+              }`}
+            >
+              {showOverlay ? 'Overlay ON' : 'Overlay OFF'}
+            </button>
+          </div>
         )}
         {annotationMode && (
           <div aria-live="polite" className="absolute top-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 text-[10px] bg-zinc-900/90 text-blue-300 rounded border border-blue-800 pointer-events-none">

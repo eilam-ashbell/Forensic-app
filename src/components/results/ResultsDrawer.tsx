@@ -19,6 +19,7 @@ export function ResultsDrawer() {
   const [open, setOpen] = useState(true)
   const [activeTab, setActiveTab] = useState<ToolId | null>(null)
   const toolStates = useStore((s) => s.toolStates)
+  const resetToolResult = useStore((s) => s.resetToolResult)
 
   const completedTools = TOOL_REGISTRY.filter(
     (t) => toolStates[t.id].status === 'done' || toolStates[t.id].status === 'error',
@@ -52,20 +53,35 @@ export function ResultsDrawer() {
               <p className="text-xs text-zinc-600 p-3">No results yet. Run a tool.</p>
             ) : (
               completedTools.map((t) => (
-                <button
+                <div
                   key={t.id}
-                  onClick={() => setActiveTab(t.id)}
-                  aria-label={`View ${t.label} result`}
-                  aria-pressed={activeTab === t.id}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors ${
+                  className={`w-full flex items-center text-xs transition-colors ${
                     activeTab === t.id
                       ? 'bg-zinc-800 text-zinc-200'
                       : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300'
                   }`}
                 >
-                  <span className="truncate">{t.label}</span>
-                  <StatusBadge status={toolStates[t.id].status} />
-                </button>
+                  <button
+                    onClick={() => setActiveTab(t.id)}
+                    aria-label={`View ${t.label} result`}
+                    aria-pressed={activeTab === t.id}
+                    className="flex-1 flex items-center justify-between px-3 py-2 text-left min-w-0"
+                  >
+                    <span className="truncate">{t.label}</span>
+                    <StatusBadge status={toolStates[t.id].status} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      resetToolResult(t.id)
+                      if (activeTab === t.id) setActiveTab(null)
+                    }}
+                    aria-label={`Clear ${t.label} result`}
+                    title="Clear result"
+                    className="shrink-0 px-2 py-2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -89,10 +105,10 @@ function ResultContent({ toolId }: { toolId: ToolId }) {
   const state = useStore((s) => s.toolStates[toolId])
   if (state.status === 'error') return <p className="text-xs text-red-400">{state.error}</p>
   if (!state.result) return null
-  return <ToolResultView result={state.result} />
+  return <ToolResultView result={state.result} params={state.params} />
 }
 
-function ToolResultView({ result }: { result: ToolResult }) {
+function ToolResultView({ result, params }: { result: ToolResult; params: Record<string, unknown> }) {
   switch (result.toolId) {
     case 'metadata-viewer':
       return (
@@ -245,12 +261,12 @@ function ToolResultView({ result }: { result: ToolResult }) {
       )
 
     case 'histogram-analyzer': {
-      const logScale = false // TODO: wire to params.logScale
+      const logScale = !!(params['logScale'])
       const chartData = result.data.bins.map((b) => ({
         value: b.value,
-        r: logScale && b.r > 0 ? Math.log10(b.r) : b.r,
-        g: logScale && b.g > 0 ? Math.log10(b.g) : b.g,
-        b: logScale && b.b > 0 ? Math.log10(b.b) : b.b,
+        r: b.r,
+        g: b.g,
+        b: b.b,
       }))
       return (
         <div>
@@ -265,6 +281,8 @@ function ToolResultView({ result }: { result: ToolResult }) {
                 interval={63}
               />
               <YAxis
+                scale={logScale ? 'log' : 'linear'}
+                domain={logScale ? ['auto', 'auto'] : [0, 'auto']}
                 tick={{ fontSize: 9, fill: '#71717a' }}
                 tickLine={false}
                 axisLine={false}
