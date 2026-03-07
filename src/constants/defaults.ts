@@ -11,6 +11,7 @@ export const TOOL_DEFAULT_PARAMS: Partial<Record<ToolId, Record<string, unknown>
   'keypoint-clone': { maxKeypoints: 2000, ratioThreshold: 0.75, minClusterSize: 3 },
   'block-matching-clone': { blockSize: 16, stride: 8, similarityThreshold: 0.02, minOffset: 32 },
   'channel-separator': { colorSpace: 'rgb', channels: ['r', 'g', 'b'] },
+  'chromatic-aberration': { blockSize: 32, anomalyThreshold: 1.5, arrowScale: 10 },
   'lighting-estimator': { smoothingSigma: 2 },
   'histogram-analyzer': { logScale: false, channels: ['r', 'g', 'b'] },
   'lsb-visualizer': { channel: 'r', bitPlane: 0 },

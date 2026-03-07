@@ -132,6 +132,33 @@ export const PARAM_SCHEMAS: Partial<Record<ToolId, ParamSchema>> = {
       ],
     },
   },
+  'chromatic-aberration': {
+    blockSize: {
+      type: 'select',
+      label: 'Block size',
+      options: [
+        { value: '16', label: '16 px (fine)' },
+        { value: '32', label: '32 px (default)' },
+        { value: '64', label: '64 px (coarse)' },
+      ],
+    },
+    anomalyThreshold: {
+      type: 'range',
+      label: 'Anomaly threshold',
+      min: 0.3,
+      max: 3.0,
+      step: 0.1,
+      unit: 'px',
+    },
+    arrowScale: {
+      type: 'range',
+      label: 'Arrow scale',
+      min: 3,
+      max: 30,
+      step: 1,
+      unit: '×',
+    },
+  },
   'lighting-estimator': {
     smoothingSigma: { type: 'range', label: 'Smoothing σ', min: 0.5, max: 10, step: 0.5 },
   },

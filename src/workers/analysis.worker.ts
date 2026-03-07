@@ -12,6 +12,8 @@ export interface ChannelResult {
 export interface HistogramBin { value: number; r: number; g: number; b: number }
 export interface HistogramResult { bins: HistogramBin[]; channels: string[] }
 export interface LsbResult { overlayDataUrl: string; channel: string; bitPlane: number; randomnessScore: number }
+export interface CaBlock { cx: number; cy: number; dx: number; dy: number; magnitude: number; isAnomalous: boolean; confidence: number }
+export interface ChromaticAberrationResult { overlayDataUrl: string; blocks: CaBlock[]; consistencyScore: number; anomalyCount: number; meanMagnitude: number; blockSize: number }
 
 export class AnalysisWorker {
 
@@ -191,6 +193,151 @@ export class AnalysisWorker {
 
     return { overlayDataUrl: pixelsToDataUrl(out, width, height), channel, bitPlane, randomnessScore }
   }
+
+  // -------------------------------------------------------------------------
+  // Chromatic Aberration Analyzer: block-wise gradient centroid shift (R vs G)
+  // Inconsistent CA vectors across blocks indicate retouched or composited regions.
+  // -------------------------------------------------------------------------
+  chromaticAberration(
+    imageData: ImageData,
+    blockSize: number,
+    anomalyThreshold: number,
+    arrowScale: number,
+    onProgress: (p: number) => void,
+  ): ChromaticAberrationResult {
+    const { width, height, data } = imageData
+    onProgress(5)
+
+    const cols = Math.ceil(width / blockSize)
+    const rows = Math.ceil(height / blockSize)
+    const blocks: CaBlock[] = []
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const bx = col * blockSize
+        const by = row * blockSize
+        const bw = Math.min(blockSize, width - bx)
+        const bh = Math.min(blockSize, height - by)
+
+        // Gradient-weighted centroid for R and G channels
+        let sumWR = 0, sumWX_R = 0, sumWY_R = 0
+        let sumWG = 0, sumWX_G = 0, sumWY_G = 0
+
+        for (let py = by; py < by + bh; py++) {
+          for (let px = bx; px < bx + bw; px++) {
+            const idx = (py * width + px) * 4
+
+            // R channel (offset 0) gradient via finite differences
+            const rL = px > 0 ? data[idx - 4]! : data[idx]!
+            const rR = px < width - 1 ? data[idx + 4]! : data[idx]!
+            const rU = py > 0 ? data[idx - width * 4]! : data[idx]!
+            const rD = py < height - 1 ? data[idx + width * 4]! : data[idx]!
+            const wR = Math.abs(rR - rL) + Math.abs(rD - rU)
+            sumWR += wR; sumWX_R += wR * px; sumWY_R += wR * py
+
+            // G channel (offset 1) gradient
+            const gL = px > 0 ? data[idx - 3]! : data[idx + 1]!
+            const gRr = px < width - 1 ? data[idx + 5]! : data[idx + 1]!
+            const gU = py > 0 ? data[idx - width * 4 + 1]! : data[idx + 1]!
+            const gD = py < height - 1 ? data[idx + width * 4 + 1]! : data[idx + 1]!
+            const wG = Math.abs(gRr - gL) + Math.abs(gD - gU)
+            sumWG += wG; sumWX_G += wG * px; sumWY_G += wG * py
+          }
+        }
+
+        const cx = bx + bw / 2
+        const cy = by + bh / 2
+        let dx = 0, dy = 0
+        if (sumWR > 0 && sumWG > 0) {
+          dx = sumWX_R / sumWR - sumWX_G / sumWG
+          dy = sumWY_R / sumWR - sumWY_G / sumWG
+        }
+        const magnitude = Math.sqrt(dx * dx + dy * dy)
+        const confidence = Math.min(1, sumWG / (bw * bh * 10))
+
+        blocks.push({ cx, cy, dx, dy, magnitude, isAnomalous: false, confidence })
+      }
+      onProgress(5 + 60 * (row + 1) / rows)
+    }
+
+    onProgress(68)
+
+    // Anomaly detection: flag blocks whose CA vector deviates from the median
+    const goodBlocks = blocks.filter(b => b.confidence > 0.05)
+    let anomalyCount = 0
+    let meanMagnitude = 0
+    let consistencyScore = 1
+
+    if (goodBlocks.length > 0) {
+      const dxArr = goodBlocks.map(b => b.dx).slice().sort((a, b) => a - b)
+      const dyArr = goodBlocks.map(b => b.dy).slice().sort((a, b) => a - b)
+      const mid = Math.floor(goodBlocks.length / 2)
+      const medDx = goodBlocks.length % 2 === 0
+        ? (dxArr[mid - 1]! + dxArr[mid]!) / 2 : dxArr[mid]!
+      const medDy = goodBlocks.length % 2 === 0
+        ? (dyArr[mid - 1]! + dyArr[mid]!) / 2 : dyArr[mid]!
+
+      for (const b of goodBlocks) {
+        const devX = b.dx - medDx
+        const devY = b.dy - medDy
+        b.isAnomalous = Math.sqrt(devX * devX + devY * devY) > anomalyThreshold
+        if (b.isAnomalous) anomalyCount++
+      }
+
+      meanMagnitude = goodBlocks.reduce((s, b) => s + b.magnitude, 0) / goodBlocks.length
+      consistencyScore = 1 - anomalyCount / goodBlocks.length
+    }
+
+    onProgress(78)
+
+    // Render overlay: transparent background, red fill for anomalous blocks, coloured arrows
+    const out = new Uint8ClampedArray(width * height * 4) // all zeros = fully transparent
+
+    // Semi-transparent red highlight for anomalous blocks
+    for (const b of blocks) {
+      if (!b.isAnomalous) continue
+      const x0 = Math.max(0, Math.round(b.cx - blockSize / 2))
+      const y0 = Math.max(0, Math.round(b.cy - blockSize / 2))
+      const x1 = Math.min(width - 1, x0 + blockSize - 1)
+      const y1 = Math.min(height - 1, y0 + blockSize - 1)
+      for (let oy = y0; oy <= y1; oy++) {
+        for (let ox = x0; ox <= x1; ox++) {
+          const idx = (oy * width + ox) * 4
+          out[idx] = 200; out[idx + 1] = 30; out[idx + 2] = 30; out[idx + 3] = 50
+        }
+      }
+    }
+
+    // Draw CA arrows using Bresenham lines
+    for (const b of blocks) {
+      if (b.confidence <= 0.05) continue
+      const ax1 = Math.round(b.cx)
+      const ay1 = Math.round(b.cy)
+      const ax2 = Math.round(b.cx + b.dx * arrowScale)
+      const ay2 = Math.round(b.cy + b.dy * arrowScale)
+      const alpha = Math.max(140, Math.min(255, Math.round(b.confidence * 255)))
+      const cr = b.isAnomalous ? 255 : 80
+      const cg = b.isAnomalous ? 80 : 220
+      const cb = 80
+      caDrawLine(out, width, height, ax1, ay1, ax2, ay2, cr, cg, cb, alpha)
+      // Center dot
+      if (ax1 >= 0 && ax1 < width && ay1 >= 0 && ay1 < height) {
+        const di = (ay1 * width + ax1) * 4
+        out[di] = cr; out[di + 1] = cg; out[di + 2] = cb; out[di + 3] = alpha
+      }
+    }
+
+    onProgress(95)
+
+    return {
+      overlayDataUrl: pixelsToDataUrl(out, width, height),
+      blocks,
+      consistencyScore,
+      anomalyCount,
+      meanMagnitude,
+      blockSize,
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -336,5 +483,27 @@ function zlibStore(data:Uint8Array):Uint8Array{
 const CT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;t[n]=c}return t})()
 function crc32(b:Uint8Array):number{let c=0xffffffff;for(const x of b)c=CT[(c^x)&0xff]!^(c>>>8);return(c^0xffffffff)>>>0}
 function uint8ToBase64(b:Uint8Array):string{let s='';for(const x of b)s+=String.fromCharCode(x);return btoa(s)}
+
+// Bresenham line drawing into an RGBA Uint8ClampedArray (used by chromaticAberration)
+function caDrawLine(
+  buf: Uint8ClampedArray, w: number, h: number,
+  x0: number, y0: number, x1: number, y1: number,
+  r: number, g: number, b: number, a: number,
+): void {
+  let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0)
+  const sx = x0 < x1 ? 1 : -1
+  const sy = y0 < y1 ? 1 : -1
+  let err = dx - dy
+  for (;;) {
+    if (x0 >= 0 && x0 < w && y0 >= 0 && y0 < h) {
+      const idx = (y0 * w + x0) * 4
+      buf[idx] = r; buf[idx + 1] = g; buf[idx + 2] = b; buf[idx + 3] = a
+    }
+    if (x0 === x1 && y0 === y1) break
+    const e2 = 2 * err
+    if (e2 > -dy) { err -= dy; x0 += sx }
+    if (e2 < dx) { err += dx; y0 += sy }
+  }
+}
 
 Comlink.expose(new AnalysisWorker())

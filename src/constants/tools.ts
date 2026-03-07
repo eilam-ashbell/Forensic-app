@@ -109,6 +109,12 @@ export const TOOL_REGISTRY: ToolMeta[] = [
     description: 'Split and analyze RGB/HSV/LAB/YCbCr channels',
   },
   {
+    id: 'chromatic-aberration',
+    label: 'Chromatic Aberration',
+    category: 'Color & Lighting',
+    description: 'Block-wise lateral color shift analysis; inconsistent CA vectors reveal retouched or composited regions',
+  },
+  {
     id: 'lighting-estimator',
     label: 'Lighting Direction Estimator',
     category: 'Color & Lighting',

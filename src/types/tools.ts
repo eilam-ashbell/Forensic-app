@@ -16,6 +16,7 @@ export const TOOL_IDS = [
   'keypoint-clone',
   'block-matching-clone',
   'channel-separator',
+  'chromatic-aberration',
   'lighting-estimator',
   'histogram-analyzer',
   'lsb-visualizer',
@@ -134,6 +135,25 @@ export interface HistogramResult {
   channels: string[]
 }
 
+export interface CaBlock {
+  cx: number
+  cy: number
+  dx: number
+  dy: number
+  magnitude: number
+  isAnomalous: boolean
+  confidence: number
+}
+
+export interface ChromaticAberrationResult {
+  overlayDataUrl: string
+  blocks: CaBlock[]
+  consistencyScore: number
+  anomalyCount: number
+  meanMagnitude: number
+  blockSize: number
+}
+
 export interface LightingResult {
   overlayDataUrl: string
   estimatedAngleDegrees: number
@@ -191,6 +211,7 @@ export type ToolResult =
   | { toolId: 'keypoint-clone'; data: CloneDetectorResult }
   | { toolId: 'block-matching-clone'; data: CloneDetectorResult }
   | { toolId: 'channel-separator'; channels: ChannelResult[] }
+  | { toolId: 'chromatic-aberration'; data: ChromaticAberrationResult }
   | { toolId: 'lighting-estimator'; data: LightingResult }
   | { toolId: 'histogram-analyzer'; data: HistogramResult }
   | { toolId: 'lsb-visualizer'; data: LsbResult }

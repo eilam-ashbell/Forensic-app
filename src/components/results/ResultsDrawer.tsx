@@ -260,6 +260,48 @@ function ToolResultView({ result, params }: { result: ToolResult; params: Record
         </div>
       )
 
+    case 'chromatic-aberration':
+      return (
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] text-zinc-500 mb-1">
+              CA Vector Field — <span className="text-emerald-400">green</span> = consistent ·{' '}
+              <span className="text-red-400">red</span> = anomalous
+            </p>
+            <img
+              src={result.data.overlayDataUrl}
+              alt="Chromatic aberration vector field"
+              className="w-full max-w-sm rounded border border-zinc-700"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="bg-zinc-800 rounded p-2">
+              <p className="text-zinc-500">Consistency</p>
+              <p className={`text-base font-bold mt-0.5 ${result.data.consistencyScore > 0.9 ? 'text-emerald-400' : result.data.consistencyScore > 0.7 ? 'text-amber-400' : 'text-red-400'}`}>
+                {(result.data.consistencyScore * 100).toFixed(1)}%
+              </p>
+            </div>
+            <div className="bg-zinc-800 rounded p-2">
+              <p className="text-zinc-500">Anomalous blocks</p>
+              <p className={`text-base font-bold mt-0.5 ${result.data.anomalyCount === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {result.data.anomalyCount}
+              </p>
+            </div>
+            <div className="bg-zinc-800 rounded p-2">
+              <p className="text-zinc-500">Mean CA shift</p>
+              <p className="text-zinc-200 font-mono mt-0.5">{result.data.meanMagnitude.toFixed(3)} px</p>
+            </div>
+            <div className="bg-zinc-800 rounded p-2">
+              <p className="text-zinc-500">Block size</p>
+              <p className="text-zinc-200 font-mono mt-0.5">{result.data.blockSize} px</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-zinc-600 italic">
+            Red blocks have CA vectors inconsistent with the global pattern — a potential indicator of image manipulation.
+          </p>
+        </div>
+      )
+
     case 'histogram-analyzer': {
       const logScale = !!(params['logScale'])
       const chartData = result.data.bins.map((b) => ({

@@ -21,6 +21,9 @@ import { runChannelSeparator } from './channel-separator/engine'
 import { runHistogram } from './histogram-analyzer/engine'
 import { runLsbVisualizer } from './lsb-visualizer/engine'
 
+// Phase 3 additions
+import { runChromaticAberration } from './chromatic-aberration/engine'
+
 // Phase 4 — Advanced tools
 import { runKeypointClone } from './keypoint-clone/engine'
 import { runBlockMatchingClone } from './block-matching-clone/engine'
@@ -44,6 +47,7 @@ registerEngine('fft-spectrum', runFftSpectrum)
 registerEngine('dct-viewer', runDctViewer)
 registerEngine('block-artifact-visualizer', runBlockArtifact)
 registerEngine('channel-separator', runChannelSeparator)
+registerEngine('chromatic-aberration', runChromaticAberration)
 registerEngine('histogram-analyzer', runHistogram)
 registerEngine('lsb-visualizer', runLsbVisualizer)
 
