@@ -9,6 +9,7 @@ import { runFileStructureInspector } from './file-structure-inspector/engine'
 import { runJpegQuantization } from './jpeg-quantization/engine'
 import { runHexViewer } from './hex-viewer/engine'
 import { runStringExtractor } from './string-extractor/engine'
+import { runSocialMediaDetector } from './social-media-detector/engine'
 
 // Phase 3 — Core Analysis
 import { runEla } from './ela/engine'
@@ -38,6 +39,7 @@ registerEngine('file-structure-inspector', runFileStructureInspector)
 registerEngine('jpeg-quantization', runJpegQuantization)
 registerEngine('hex-viewer', runHexViewer)
 registerEngine('string-extractor', runStringExtractor)
+registerEngine('social-media-detector', runSocialMediaDetector)
 
 // Phase 3
 registerEngine('ela', runEla)

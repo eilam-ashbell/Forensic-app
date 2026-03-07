@@ -19,4 +19,5 @@ export const TOOL_DEFAULT_PARAMS: Partial<Record<ToolId, Record<string, unknown>
   'ai-forgery-detector': { threshold: 0.5, patchMode: 'sliding', patchSize: 256 },
   'hex-viewer': { offset: 0, count: 4096 },
   'string-extractor': { minLength: 6, encoding: 'ascii' },
+  'social-media-detector': {},
 }

@@ -490,6 +490,132 @@ function ToolResultView({ result, params }: { result: ToolResult; params: Record
         </div>
       )
 
+    case 'social-media-detector': {
+      const d = result.data
+      const confColor =
+        d.overallConfidence === 'high'
+          ? 'text-emerald-400'
+          : d.overallConfidence === 'medium'
+            ? 'text-amber-400'
+            : d.overallConfidence === 'low'
+              ? 'text-zinc-400'
+              : 'text-zinc-600'
+
+      const markerChipColor = (m: string) => {
+        if (m === 'SOF2') return 'bg-amber-900/60 text-amber-300 border-amber-700'
+        if (m === 'APP1') return 'bg-emerald-900/60 text-emerald-300 border-emerald-700'
+        if (m === 'COM') return 'bg-blue-900/60 text-blue-300 border-blue-700'
+        return 'bg-zinc-800 text-zinc-400 border-zinc-700'
+      }
+
+      return (
+        <div className="space-y-3">
+          {/* Top banner */}
+          <div className="bg-zinc-800 rounded p-3 flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Top match</p>
+              <p className={`text-lg font-bold ${confColor}`}>
+                {d.topPlatform ?? 'No match detected'}
+              </p>
+            </div>
+            {d.overallConfidence !== 'none' && (
+              <span
+                className={`text-[10px] font-bold uppercase px-2 py-1 rounded border ${
+                  d.overallConfidence === 'high'
+                    ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700'
+                    : d.overallConfidence === 'medium'
+                      ? 'bg-amber-900/50 text-amber-300 border-amber-700'
+                      : 'bg-zinc-700 text-zinc-400 border-zinc-600'
+                }`}
+              >
+                {d.overallConfidence}
+              </span>
+            )}
+          </div>
+
+          {/* Structural flags */}
+          <div className="flex flex-wrap gap-1.5">
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded border ${d.strippedExif ? 'bg-red-900/40 text-red-300 border-red-800' : 'bg-emerald-900/40 text-emerald-300 border-emerald-800'}`}
+            >
+              {d.strippedExif ? 'EXIF stripped' : 'EXIF present'}
+            </span>
+            {d.progressiveJpeg && (
+              <span className="text-[10px] px-2 py-0.5 rounded border bg-amber-900/40 text-amber-300 border-amber-800">
+                Progressive JPEG
+              </span>
+            )}
+            {d.hasJpegComment && (
+              <span className="text-[10px] px-2 py-0.5 rounded border bg-blue-900/40 text-blue-300 border-blue-800">
+                JPEG comment present
+              </span>
+            )}
+            {d.qualityEquivalent !== null && (
+              <span className="text-[10px] px-2 py-0.5 rounded border bg-zinc-800 text-zinc-400 border-zinc-700">
+                Est. quality ~{d.qualityEquivalent}%
+              </span>
+            )}
+          </div>
+
+          {/* JPEG marker sequence */}
+          {d.markerSequence.length > 0 && (
+            <div>
+              <p className="text-[10px] text-zinc-500 mb-1">JPEG marker sequence</p>
+              <div className="flex flex-wrap gap-1">
+                {d.markerSequence.map((m, i) => (
+                  <span
+                    key={i}
+                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${markerChipColor(m)}`}
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Candidates summary */}
+          {d.candidates.length > 0 && (
+            <TableResult
+              rows={d.candidates.map((c) => ({
+                Platform: c.platform,
+                Confidence: c.confidence.toUpperCase(),
+                Signals: c.signals.length,
+              }))}
+              columns={['Platform', 'Confidence', 'Signals']}
+              highlight={(row) => row['Confidence'] === 'HIGH'}
+            />
+          )}
+
+          {/* Signal detail */}
+          {d.totalSignals > 0 && (
+            <div>
+              <p className="text-[10px] text-zinc-500 mb-1">All signals ({d.totalSignals})</p>
+              <TableResult
+                rows={d.candidates.flatMap((c) =>
+                  c.signals.map((s) => ({
+                    Type: s.type,
+                    Platform: s.platform ?? '–',
+                    Value: s.matchedValue.slice(0, 60),
+                    Conf: s.confidence,
+                  })),
+                )}
+                columns={['Type', 'Platform', 'Value', 'Conf']}
+                highlight={(row) => row['Conf'] === 'high'}
+                maxRows={40}
+              />
+            </div>
+          )}
+
+          {d.candidates.length === 0 && (
+            <p className="text-[10px] text-zinc-600 italic">
+              No social media platform signals detected. Filename: {d.filename}
+            </p>
+          )}
+        </div>
+      )
+    }
+
     default:
       return (
         <pre className="text-[10px] text-zinc-300 font-mono whitespace-pre-wrap break-all">

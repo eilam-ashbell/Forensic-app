@@ -24,6 +24,7 @@ export const TOOL_IDS = [
   'ai-forgery-detector',
   'hex-viewer',
   'string-extractor',
+  'social-media-detector',
 ] as const
 
 export type ToolId = (typeof TOOL_IDS)[number]
@@ -195,6 +196,44 @@ export interface StringMatch {
   length: number
 }
 
+// Social Media Detector
+export type SocialMediaSignalType =
+  | 'filename'      // matched filename regex
+  | 'binary-string' // platform string found in file bytes
+  | 'structural'    // EXIF absent, FBMD comment, progressive encoding
+  | 'quantization'  // quantization table matches known platform table
+  | 'marker-order'  // JPEG marker sequence matches known platform sequence
+
+export type SignalConfidence = 'high' | 'medium' | 'low'
+
+export interface SocialMediaSignal {
+  type: SocialMediaSignalType
+  platform?: string      // undefined = generic (e.g. "EXIF stripped")
+  description: string
+  matchedValue: string
+  offset?: number        // byte offset (binary-string signals only)
+  confidence: SignalConfidence
+}
+
+export interface SocialMediaCandidate {
+  platform: string
+  confidence: SignalConfidence
+  signals: SocialMediaSignal[]
+}
+
+export interface SocialMediaDetectorResult {
+  filename: string
+  candidates: SocialMediaCandidate[]
+  topPlatform: string | null
+  overallConfidence: SignalConfidence | 'none'
+  totalSignals: number
+  strippedExif: boolean
+  progressiveJpeg: boolean
+  hasJpegComment: boolean
+  markerSequence: string[]
+  qualityEquivalent: number | null
+}
+
 // Discriminated union of all tool results
 
 export type ToolResult =
@@ -219,3 +258,4 @@ export type ToolResult =
   | { toolId: 'ai-forgery-detector'; data: AiForgeryResult }
   | { toolId: 'hex-viewer'; lines: HexLine[]; totalBytes: number }
   | { toolId: 'string-extractor'; strings: StringMatch[] }
+  | { toolId: 'social-media-detector'; data: SocialMediaDetectorResult }

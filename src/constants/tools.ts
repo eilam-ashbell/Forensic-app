@@ -159,6 +159,14 @@ export const TOOL_REGISTRY: ToolMeta[] = [
     category: 'Raw Inspection',
     description: 'Extract printable strings from raw file',
   },
+  // File & Metadata — Social Media
+  {
+    id: 'social-media-detector',
+    label: 'Social Media Detector',
+    category: 'File & Metadata',
+    description:
+      'Identify social media origin via filename patterns, binary strings, JPEG quantization table fingerprints, and marker sequence analysis',
+  },
 ]
 
 export const TOOL_CATEGORIES: ToolCategory[] = [
